@@ -50,9 +50,7 @@ export const createOrder = async (req, res) => {
 
       if (normalizedPaymentMethod === 'upi' || normalizedPaymentMethod === 'card' || normalizedPaymentMethod === 'online' || normalizedPaymentMethod === 'razorpay') {
             computedPaymentStatus = 'Paid';
-            computedTransactionId = finalPaymentId || `TXN${Date.now()}${Math.floor(Math.random() * 10000)}`;
-        } else {
-            computedTransactionId = finalPaymentId || 'N/A';
+            computedTransactionId = paymentId || `TXN${Date.now()}${Math.floor(Math.random() * 10000)}`;
         }
         console.log("Pre-Save Order Debug:", { paymentMethod, paymentId, computedTransactionId, computedPaymentStatus });
 
