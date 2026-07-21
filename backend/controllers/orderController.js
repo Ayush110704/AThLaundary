@@ -198,6 +198,7 @@ export const getUserOrders = async (req, res) => {
             customer: { name: order.customerName, mobile: order.phone },
             address: order.address,
             paymentStatus: order.paymentStatus || 'Pending',
+            paymentMethod: order.paymentMethod,
             items: order.items.map(item => ({
                 name: item.clothType,
                 category: item.serviceType,
