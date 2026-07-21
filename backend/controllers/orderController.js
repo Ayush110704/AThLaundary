@@ -36,6 +36,14 @@ const generateOrderId = () => {
             orderId = generateOrderId();
         }
 
+        let computedPaymentStatus = 'Pending';
+        let computedTransactionId = null;
+
+        if (paymentMethod === 'upi' || paymentMethod === 'card') {
+            computedPaymentStatus = 'Paid';
+            computedTransactionId = `TXN${Date.now()}${Math.floor(Math.random() * 10000)}`;
+        }
+
         const order = await Order.create({
             orderId,
             userId,
@@ -46,6 +54,8 @@ const generateOrderId = () => {
             items,
             totalAmount,
             paymentMethod,
+            paymentStatus: computedPaymentStatus,
+            transactionId: computedTransactionId,
             status: status || 'Pending',
             // 2. Add these to the creation object:
             pickupDate,

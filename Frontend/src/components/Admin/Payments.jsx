@@ -228,11 +228,11 @@ function Payments() {
       
       if (booking.paymentStatus === 'Paid') {
         paymentStatus = 'Completed';
-        transactionId = `TXN${String(Math.floor(Math.random() * 1000000000)).padStart(9, '0')}`;
+        transactionId = booking.transactionId || 'N/A';
         notes = 'Payment successful';
       } else if (booking.paymentStatus === 'Refunded') {
         paymentStatus = 'Refunded';
-        transactionId = `TXN${String(Math.floor(Math.random() * 1000000000)).padStart(9, '0')}`;
+        transactionId = booking.transactionId || 'N/A';
         notes = 'Refund processed';
       } else if (booking.paymentStatus === 'Pending') {
         paymentStatus = 'Pending';
