@@ -23,9 +23,14 @@ const Payment = ({ checkoutData, setCheckoutData }) => {
     setOpenSection(section);
     setSelectedMethod(section);
 
+    const generatedTxnId = (section === 'upi' || section === 'card') 
+        ? `TXN${Date.now()}${Math.floor(Math.random() * 10000)}` 
+        : null;
+
     setPaymentData((prev) => ({
       ...prev,
       method: section,
+      paymentId: generatedTxnId,
     }));
   }
 };
@@ -137,6 +142,7 @@ onClick={() => {
   setPaymentData((prev) => ({
     ...prev,
     method: "cod",
+    paymentId: null, 
   }));
 }}
   className={`border rounded-xl p-4 cursor-pointer transition

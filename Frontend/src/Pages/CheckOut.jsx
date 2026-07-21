@@ -11,6 +11,7 @@ import Payment from '../components/Payment';
 import { getCheckoutData } from '../utils/checkoutStorage';
 import validateStep from '../utils/validateStep';
 import Swal from "sweetalert2";
+import axios from 'axios';
 
 
 const CheckOut = () => {
@@ -25,35 +26,85 @@ const CheckOut = () => {
     { id: 3, title: "Schedule" },
     { id: 4, title: "Payment" },
   ];
+const openRazorpay = async () => {
+    try {
+      const { data: order } = await axios.post('/api/orders/create', { 
+        amount: checkoutData.totalAmount 
+      });
 
+      const options = {
+        key: process.env.REACT_APP_RAZORPAY_KEY_ID || "YOUR_RAZORPAY_KEY_ID",
+        amount: order.amount,
+        currency: order.currency,
+        name: "Your Business Name",
+        description: "Booking Payment",
+        order_id: order.id,
+        handler: async function (response) {
+          const finalOrderData = {
+            ...checkoutData,
+            paymentStatus: "Paid",
+            paymentMethod: checkoutData.payment.method || "Online",
+            paymentId: response.razorpay_payment_id, 
+            transactionId: response.razorpay_payment_id, 
+          };
+
+          await saveOrderToDatabase(finalOrderData);
+        },
+        prefill: {
+          name: checkoutData.customerName || "",
+          email: checkoutData.customerEmail || "",
+          contact: checkoutData.customerPhone || "",
+        },
+        theme: {
+          color: "#2563eb",
+        },
+      };
+
+      const rzp = new window.Razorpay(options);
+      rzp.open();
+    } catch (error) {
+      console.error("Razorpay Checkout Error:", error);
+      Swal.fire({
+        icon: "error",
+        title: "Payment Failed",
+        text: "Could not initiate Razorpay payment. Please try again.",
+      });
+    }
+  };
+
+  const saveOrderToDatabase = async (orderPayload) => {
+    try {
+      await axios.post('/api/orders', orderPayload);
+      
+      Swal.fire({
+        icon: "success",
+        title: "Booking Successful!",
+        text: "Your payment was verified and booking is confirmed.",
+        confirmButtonColor: "#2563eb",
+      });
+    } catch (err) {
+      console.error("Error saving order:", err);
+    }
+  };
   
   const handleNext = async () => {
-  const result = validateStep(currentStep);
+    const result = validateStep(currentStep);
 
-  if (!result.success) {
-    await Swal.fire({
-      icon: "warning",
-      title: "Incomplete Details",
-      text: result.message,
-      confirmButtonColor: "#2563eb",
-    });
-    return;
-  }
-
-  // IF WE ARE AT STEP 4 (PAYMENT), TRIGGER RAZORPAY
-  if (currentStep === 4) {
-    if (checkoutData.payment.method === "cod") {
-      // If COD, just save as usual
-      saveOrderToDatabase(); 
-    } else {
-      // If Card/UPI, open Razorpay
-      openRazorpay();
+    if (!result.success) {
+      await Swal.fire({
+        icon: "warning",
+        title: "Incomplete Details",
+        text: result.message,
+        confirmButtonColor: "#2563eb",
+      });
+      return;
     }
-  } else {
-    // For steps 1-3, just move forward
-    setCurrentStep((prev) => prev + 1);
-  }
-};
+
+    // Move to the next step if not on the final step
+    if (currentStep < steps.length) {
+      setCurrentStep((prev) => prev + 1);
+    }
+  };
 
   return (
     <>

@@ -1,4 +1,4 @@
-
+ 
  import axios from 'axios';
  import React, {useState} from 'react';
 import { motion } from 'framer-motion';
@@ -50,6 +50,8 @@ const IS_DEV_MODE = true;
         items: checkoutData.items,
         totalAmount: grandTotal,
         paymentMethod: checkoutData.payment?.method || "cod",
+        // Pull the pre-generated paymentId from Payment.jsx or fallback to COD string
+        paymentId: checkoutData.payment?.method === "cod" ? `COD-${Date.now()}` : (checkoutData.payment?.paymentId || null),
         pickupDate: checkoutData.schedule?.date,
         pickupTimeSlot: checkoutData.schedule?.slot,
         deliveryDate: checkoutData.schedule?.deliveryDate,

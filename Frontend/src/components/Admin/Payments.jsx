@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+ import React, { useState, useEffect } from 'react';
 import { 
   Search, 
   Eye, 
@@ -92,7 +92,6 @@ function PaymentDetailView({ payment, onBack }) {
             <p className="text-sm text-gray-500">#{payment.id}</p>
           </div>
         </div>
-        
       </div>
 
       {/* Payment Details Grid */}
@@ -179,15 +178,13 @@ function PaymentDetailView({ payment, onBack }) {
                   </span>
                 </div>
               </div>
-              {payment.transactionId && (
-                <div className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
-                  <FileText className="w-5 h-5 text-gray-500 mt-0.5" />
-                  <div>
-                    <p className="text-xs text-gray-500">Transaction ID</p>
-                    <p className="text-sm font-mono text-gray-800">{payment.transactionId}</p>
-                  </div>
+              <div className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
+                <FileText className="w-5 h-5 text-gray-500 mt-0.5" />
+                <div>
+                  <p className="text-xs text-gray-500">Transaction ID</p>
+                  <p className="text-sm font-mono text-gray-800">{payment.transactionId}</p>
                 </div>
-              )}
+              </div>
             </div>
 
             {/* Payment Date */}
@@ -218,32 +215,40 @@ function PaymentDetailView({ payment, onBack }) {
 function Payments() {
   const { bookings } = useOrders();
   
-  // Generate payments from bookings
+  // Helper to extract the proper transaction ID from all possible booking property names shown in your terminal logs
+  const extractTransactionId = (booking) => {
+    return (
+      booking.paymentId ||
+      booking.transactionId ||
+      booking.razorpayPaymentId ||
+      booking.computedTransactionId ||
+      booking.razorpay_payment_id ||
+      'N/A'
+    );
+  };
+
   const generatePaymentsFromBookings = () => {
     return bookings.map((booking, index) => {
-      // Determine payment status based on booking status and payment status
       let paymentStatus = 'Pending';
-      let transactionId = null;
       let notes = '';
       
       if (booking.paymentStatus === 'Paid') {
         paymentStatus = 'Completed';
-        transactionId = booking.transactionId || 'N/A';
         notes = 'Payment successful';
       } else if (booking.paymentStatus === 'Refunded') {
         paymentStatus = 'Refunded';
-        transactionId = booking.transactionId || 'N/A';
         notes = 'Refund processed';
       } else if (booking.paymentStatus === 'Pending') {
         paymentStatus = 'Pending';
         notes = 'Awaiting payment';
       }
       
-      // If booking is cancelled but payment was made, it should be refunded
       if (booking.status === 'Cancelled' && booking.paymentStatus === 'Paid') {
         paymentStatus = 'Refunded';
         notes = 'Refund processed due to cancellation';
       }
+
+      const txnId = extractTransactionId(booking);
       
       return {
         id: `PAY${String(index + 1).padStart(3, '0')}`,
@@ -255,7 +260,7 @@ function Payments() {
         paymentDate: booking.bookingDate,
         paymentMethod: booking.paymentMethod,
         paymentStatus: paymentStatus,
-        transactionId: transactionId,
+        transactionId: txnId, // 👉 ADD THIS LINE HERE
         bookingStatus: booking.status,
         service: booking.service,
         items: booking.items,
@@ -263,9 +268,12 @@ function Payments() {
       };
     });
   };
-
   // State
-  const [payments, setPayments] = useState(generatePaymentsFromBookings());
+  // Change this:
+  // const [payments, setPayments] = useState(generatePaymentsFromBookings());
+
+  // To this:
+  const [payments, setPayments] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [filterStatus, setFilterStatus] = useState('All');
@@ -279,21 +287,15 @@ function Payments() {
     setPayments(generatePaymentsFromBookings());
   }, [bookings]);
 
-  // ============================================================
-  // COMPUTED VALUES
-  // ============================================================
   const stats = {
     total: payments.length,
     completed: payments.filter(p => p.paymentStatus === 'Completed').length,
     pending: payments.filter(p => p.paymentStatus === 'Pending').length,
-    // refunded: payments.filter(p => p.paymentStatus === 'Refunded').length,
     totalRevenue: payments.filter(p => p.paymentStatus === 'Completed').reduce((sum, p) => sum + p.amount, 0),
   };
 
-  // Get unique payment methods for filter
   const uniqueMethods = ['All', ...new Set(payments.map(p => p.paymentMethod))];
 
-  // Filter payments
   const filteredPayments = payments.filter(payment => {
     const matchesSearch = payment.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
                           payment.customerEmail.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -305,21 +307,16 @@ function Payments() {
     return matchesSearch && matchesStatus && matchesMethod;
   });
 
-  // Pagination
   const totalPages = Math.ceil(filteredPayments.length / itemsPerPage);
   const paginatedPayments = filteredPayments.slice(
     (currentPage - 1) * itemsPerPage,
     currentPage * itemsPerPage
   );
 
-  // Reset page when filters change
   useEffect(() => {
     setCurrentPage(1);
   }, [searchTerm, filterStatus, filterMethod]);
 
-
-  // HANDLERS
- 
   const handlePaymentClick = (payment) => {
     setSelectedPayment(payment);
     setShowDetailView(true);
@@ -334,7 +331,6 @@ function Payments() {
     const config = {
       'Completed': { color: 'bg-green-100 text-green-800', icon: CheckCircle },
       'Pending': { color: 'bg-yellow-100 text-yellow-800', icon: Clock },
-      // 'Refunded': { color: 'bg-red-100 text-red-800', icon: AlertTriangle },
       'Failed': { color: 'bg-red-100 text-red-800', icon: XCircle }
     };
     const { color, icon: Icon } = config[status] || config.Pending;
@@ -361,11 +357,6 @@ function Payments() {
     }
   };
 
- 
-  // RENDER
-  
-  
-  // If detail view is active, show the payment detail
   if (showDetailView && selectedPayment) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-6">
@@ -379,7 +370,6 @@ function Payments() {
     );
   }
 
-  // Otherwise show the list view
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-6">
       <div className="max-w-7xl mx-auto">
@@ -396,8 +386,6 @@ function Payments() {
             </h1>
             <p className="text-gray-600 mt-1">Manage all payments and transactions</p>
           </div>
-          
-      
         </div>
 
         {/* STATS CARDS */}
@@ -414,7 +402,6 @@ function Payments() {
             <p className="text-sm text-gray-500">Pending</p>
             <p className="text-2xl font-bold text-yellow-600">{stats.pending}</p>
           </div>
-          
           <div className="bg-white rounded-lg shadow-sm p-4 border-l-4 border-purple-500 hover:shadow-md transition">
             <p className="text-sm text-gray-500">Revenue</p>
             <p className="text-2xl font-bold text-purple-600">₹{stats.totalRevenue}</p>
@@ -424,7 +411,6 @@ function Payments() {
         {/* TOOLBAR */}
         <div className="bg-white rounded-lg shadow-sm p-4 mb-6">
           <div className="flex flex-col md:flex-row gap-4">
-            {/* Search */}
             <div className="flex-1 relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
               <input
@@ -436,7 +422,6 @@ function Payments() {
               />
             </div>
 
-            {/* Filters */}
             <select
               className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition"
               value={filterStatus}
@@ -485,7 +470,7 @@ function Payments() {
                   >
                     <td className="px-4 py-3">
                       <span className="text-sm font-medium text-blue-600">{payment.id}</span>
-                      {payment.transactionId && (
+                      {payment.transactionId && payment.transactionId !== 'N/A' && (
                         <div className="text-xs text-gray-400 font-mono">{payment.transactionId}</div>
                       )}
                     </td>
@@ -534,7 +519,6 @@ function Payments() {
             </table>
           </div>
 
-          {/* Empty State */}
           {filteredPayments.length === 0 && (
             <div className="text-center py-12">
               <CreditCard className="w-12 h-12 text-gray-400 mx-auto mb-3" />
@@ -542,7 +526,6 @@ function Payments() {
             </div>
           )}
 
-          {/* PAGINATION */}
           {filteredPayments.length > 0 && (
             <div className="px-4 py-3 border-t border-gray-200 flex flex-col sm:flex-row justify-between items-center gap-3">
               <p className="text-sm text-gray-500">

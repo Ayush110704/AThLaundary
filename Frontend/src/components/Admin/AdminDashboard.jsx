@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+ import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -15,7 +15,6 @@ import {
   Clock,
   Plus,
   CheckCircle,
-  XCircle,
   AlertTriangle,
   Clock as ClockIcon,
   DollarSign
@@ -42,53 +41,59 @@ const AdminDashboard = () => {
 
     setAdminName(session.fullName || 'Admin');
 
-    // Load login activities from localStorage
-    loadLoginActivities(session);
+    // Load and update login activities from localStorage preserving all records
+    loadAndRecordLoginActivities(session);
   }, [navigate]);
 
-  // Load login activities from localStorage
-  const loadLoginActivities = (session) => {
+  // Load and preserve login activities from localStorage across different admin logins
+  const loadAndRecordLoginActivities = (session) => {
     const storedActivities = JSON.parse(localStorage.getItem('adminLoginActivities') || '[]');
     
-    // If no activities exist, create default one with current login
-    if (storedActivities.length === 0) {
-      const initials = session.fullName ? 
-        session.fullName.split(' ').map(word => word[0]).join('').toUpperCase().slice(0, 2) : 
-        'AD';
-      
-      const defaultActivity = {
+    const initials = session.fullName ? 
+      session.fullName.split(' ').map(word => word[0]).join('').toUpperCase().slice(0, 2) : 
+      'AD';
+    
+    const currentSessionTime = session.loginTimestamp || new Date().toISOString();
+    
+    // Check if this exact session/login already exists to prevent duplicate spam on re-renders
+    const currentActivityExists = storedActivities.some(
+      act => act.name === (session.fullName || 'Admin') && Math.abs(new Date(act.timestamp) - new Date(currentSessionTime)) < 60000
+    );
+
+    let updatedActivities = [...storedActivities];
+
+    if (!currentActivityExists || storedActivities.length === 0) {
+      const newActivity = {
         id: Date.now(),
         initials: initials,
         name: session.fullName || 'Admin',
+        email: session.email || session.userEmail || 'No email provided', // Captured email
         action: 'Logged in to admin dashboard',
         time: 'Just now',
-        timestamp: new Date().toISOString()
+        timestamp: currentSessionTime
       };
-      localStorage.setItem('adminLoginActivities', JSON.stringify([defaultActivity]));
-      setLoginActivities([defaultActivity]);
-    } else {
-      setLoginActivities(storedActivities);
+      // Add new login to the beginning of the array so history accumulates
+      updatedActivities = [newActivity, ...storedActivities];
+      localStorage.setItem('adminLoginActivities', JSON.stringify(updatedActivities));
     }
+
+    setLoginActivities(updatedActivities);
   };
 
   // ============= COMPUTED STATISTICS FROM BOOKINGS =============
   
-  // Filter out cancelled orders
-  const activeBookings = bookings.filter(b => b.status?.toLowerCase() !== 'cancelled');
+  const activeBookings = (Array.isArray(bookings) ? bookings : []).filter(b => b && b.status && b.status.toLowerCase() !== 'cancelled');
   
-  // Order counts (excluding cancelled)
   const totalOrders = activeBookings.length;
-  const completedOrders = activeBookings.filter(b => b.status?.toLowerCase() === 'completed').length;
+  const completedOrders = activeBookings.filter(b => b?.status?.toLowerCase() === 'completed').length;
   const activeOrders = activeBookings.filter(b => {
-    const s = b.status?.toLowerCase();
+    const s = b?.status?.toLowerCase();
     return s && s !== 'completed' && s !== 'cancelled';
   }).length;
-  const pendingOrders = activeBookings.filter(b => b.status?.toLowerCase() === 'pickup' || b.status?.toLowerCase() === 'pending').length;
+  const pendingOrders = activeBookings.filter(b => b?.status?.toLowerCase() === 'pickup' || b?.status?.toLowerCase() === 'pending').length;
 
-  // TOTAL REVENUE - ONLY REVENUE, NO PROFIT/LOSS (excluding cancelled)
   const totalRevenue = activeBookings.reduce((sum, b) => sum + (b.totalAmount || 0), 0);
 
-  // Order status distribution for pie chart (excluding cancelled)
   const statusDistribution = activeBookings.reduce((acc, booking) => {
     const s = booking.status?.toLowerCase();
     let displayStatus = 'Active';
@@ -109,7 +114,6 @@ const AdminDashboard = () => {
     value
   }));
 
-  // Service distribution (excluding cancelled)
   const serviceData = activeBookings.reduce((acc, booking) => {
     if (booking.service) {
       const services = booking.service.split(',').map(s => s.trim()).filter(Boolean);
@@ -127,7 +131,6 @@ const AdminDashboard = () => {
     value
   }));
 
-  // Payment method distribution (excluding cancelled)
   const paymentData = activeBookings.reduce((acc, booking) => {
     const method = booking.paymentMethod || 'Unknown';
     acc[method] = (acc[method] || 0) + 1;
@@ -139,7 +142,6 @@ const AdminDashboard = () => {
     value
   }));
 
-  // Weekly revenue (last 7 days) (excluding cancelled)
   const today = new Date();
   const weeklyRevenueData = Array.from({ length: 7 }, (_, i) => {
     const date = new Date(today);
@@ -158,7 +160,6 @@ const AdminDashboard = () => {
     return { name: day, revenue: dailyRevenue };
   });
 
-  // Monthly revenue (last 6 months) (excluding cancelled)
   const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
   const monthlyRevenueData = Array.from({ length: 6 }, (_, i) => {
     const month = new Date();
@@ -176,8 +177,6 @@ const AdminDashboard = () => {
     return { name: monthName, revenue: monthlyTotal };
   });
 
-  // ============= CONSTANTS =============
-  
   const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899'];
   const STATUS_COLORS = {
     'Completed': '#10B981',
@@ -185,7 +184,6 @@ const AdminDashboard = () => {
     'Active': '#3B82F6'
   };
 
-  // Quick Actions Data  
   const quickActions = [
     { id: 1, icon: Users, label: 'User Management', color: 'bg-blue-500', path: '/admin-dashboard/user-management' },
     { id: 2, icon: ShoppingBag, label: 'Order Management', color: 'bg-green-500', path: '/admin-dashboard/orders' },
@@ -198,7 +196,6 @@ const AdminDashboard = () => {
     navigate(path);
   };
 
-  // Get current date and time for welcome message
   const currentHour = new Date().getHours();
   let greeting = 'Good Morning';
   if (currentHour >= 12 && currentHour < 17) {
@@ -214,7 +211,6 @@ const AdminDashboard = () => {
     day: 'numeric'
   });
 
-  // Custom tooltip for charts
   const CustomTooltip = ({ active, payload, label }) => {
     if (active && payload && payload.length) {
       return (
@@ -231,13 +227,11 @@ const AdminDashboard = () => {
     return null;
   };
 
-  // Get initials from name
   const getInitials = (name) => {
     if (!name) return 'AD';
     return name.split(' ').map(word => word[0]).join('').toUpperCase().slice(0, 2);
   };
 
-  // Format time
   const formatTime = (timestamp) => {
     if (!timestamp) return 'Just now';
     const date = new Date(timestamp);
@@ -256,7 +250,6 @@ const AdminDashboard = () => {
 
   return (
     <>
-      {/* ===== WELCOME MESSAGE ===== */}
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -281,7 +274,6 @@ const AdminDashboard = () => {
         </div>
       </motion.div>
 
-      {/* ===== ORDER STATUS SUMMARY CARDS (NO CANCELLED) ===== */}
       <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-8">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -335,7 +327,6 @@ const AdminDashboard = () => {
         </motion.div>
       </div>
 
-      {/* ===== TOTAL REVENUE - ONLY REVENUE ===== */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -354,7 +345,6 @@ const AdminDashboard = () => {
         </div>
       </motion.div>
 
-      {/* ===== RECENT ACTIVITY & QUICK ACTIONS ===== */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8"> 
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -390,13 +380,14 @@ const AdminDashboard = () => {
                       <div>
                         <p className="text-sm text-gray-800">
                           <span className="font-medium">{activity.name}</span>
-                          <span className="text-gray-500 ml-1">{activity.action}</span>
+                          {/* Displaying Gmail alongside the name */}
+                          <span className="text-xs text-gray-500 block">
+                            {activity.email}
+                          </span>
                         </p>
-                        {activity.timestamp && (
-                          <p className="text-xs text-gray-400 mt-0.5">
-                            {new Date(activity.timestamp).toLocaleString()}
-                          </p>
-                        )}
+                        <p className="text-xs text-gray-400 mt-0.5">
+                          {activity.action} • {activity.timestamp ? new Date(activity.timestamp).toLocaleString() : ''}
+                        </p>
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
@@ -413,7 +404,6 @@ const AdminDashboard = () => {
           </div>
         </motion.div>
 
-        {/* Quick Actions */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -455,9 +445,7 @@ const AdminDashboard = () => {
         </motion.div>
       </div>
 
-      {/* ===== CHARTS ROW ===== */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-        {/* Weekly Revenue Chart */}
         <div className="bg-white rounded-xl shadow-sm p-6">
           <h3 className="text-lg font-semibold text-gray-800 mb-4">Weekly Revenue</h3>
           <ResponsiveContainer width="100%" height={300}>
@@ -475,7 +463,6 @@ const AdminDashboard = () => {
           </div>
         </div>
 
-        {/* Order Status Distribution (NO CANCELLED) */}
         <div className="bg-white rounded-xl shadow-sm p-6">
           <h3 className="text-lg font-semibold text-gray-800 mb-4">Order Status Distribution</h3>
           {orderStatusData.length > 0 ? (
@@ -521,7 +508,6 @@ const AdminDashboard = () => {
         </div>
       </div>
 
-      {/* ===== MONTHLY REVENUE TREND ===== */}
       <div className="bg-white rounded-xl shadow-sm p-6 mb-8">
         <h3 className="text-lg font-semibold text-gray-800 mb-4">Monthly Revenue Trend</h3>
         <ResponsiveContainer width="100%" height={250}>
@@ -536,9 +522,7 @@ const AdminDashboard = () => {
         </ResponsiveContainer>
       </div>
 
-      {/* ===== SERVICE & PAYMENT DISTRIBUTION ===== */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Service Distribution */}
         <div className="bg-white rounded-xl shadow-sm p-6">
           <h3 className="text-lg font-semibold text-gray-800 mb-4">Service Distribution</h3>
           {serviceDistribution.length > 0 ? (
@@ -555,7 +539,6 @@ const AdminDashboard = () => {
           )}
         </div>
 
-        {/* Payment Method Distribution */}
         <div className="bg-white rounded-xl shadow-sm p-6">
           <h3 className="text-lg font-semibold text-gray-800 mb-4">Payment Methods</h3>
           {paymentDistribution.length > 0 ? (

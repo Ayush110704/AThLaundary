@@ -1,11 +1,11 @@
-import Order from '../models/Order.js'; // Adjust the path to your Order model
+ import Order from '../models/Order.js'; // Adjust the path to your Order model
 
 const generateOrderId = () => {
     const randomDigits = Math.floor(100000 + Math.random() * 900000);
     return `ATH${randomDigits}`;
 };
 
- export const createOrder = async (req, res) => {
+export const createOrder = async (req, res) => {
     try {
         const {
             userId,
@@ -21,10 +21,15 @@ const generateOrderId = () => {
             pickupTimeSlot,
             deliveryDate,
             deliveryTimeSlot,
-            paymentId
+            paymentId,
+            razorpay_payment_id,
+            transactionId
         } = req.body;
 
-        // UPDATED: Added these fields to the validation check
+        // Fallback capture for whatever ID field the frontend sent
+        const finalPaymentId = paymentId || razorpay_payment_id || transactionId;
+        
+
         if (!userId || !customerName || !email || !phone || !address || !Array.isArray(items) || !items.length || totalAmount === undefined || !paymentMethod || !pickupDate || !pickupTimeSlot || !deliveryDate || !deliveryTimeSlot) {
             return res.status(400).json({
                 success: false,
@@ -40,11 +45,15 @@ const generateOrderId = () => {
         let computedPaymentStatus = 'Pending';
         let computedTransactionId = null;
 
-        if (paymentMethod === 'upi' || paymentMethod === 'card') {
-            computedPaymentStatus = 'Paid';
-            computedTransactionId = paymentId || `TXN${Date.now()}${Math.floor(Math.random() * 10000)}`;
-        }
+        // FIXED: Safely normalize paymentMethod to lower-case so case-differences ('UPI' vs 'upi') don't break it
+        const normalizedPaymentMethod = String(paymentMethod || '').trim().toLowerCase();
 
+      if (normalizedPaymentMethod === 'upi' || normalizedPaymentMethod === 'card' || normalizedPaymentMethod === 'online' || normalizedPaymentMethod === 'razorpay') {
+            computedPaymentStatus = 'Paid';
+            computedTransactionId = finalPaymentId || `TXN${Date.now()}${Math.floor(Math.random() * 10000)}`;
+        } else {
+            computedTransactionId = finalPaymentId || 'N/A';
+        }
         console.log("Pre-Save Order Debug:", { paymentMethod, paymentId, computedTransactionId, computedPaymentStatus });
 
         const order = await Order.create({
@@ -60,7 +69,6 @@ const generateOrderId = () => {
             paymentStatus: computedPaymentStatus,
             transactionId: computedTransactionId,
             status: status || 'Pending',
-            // 2. Add these to the creation object:
             pickupDate,
             pickupTimeSlot,
             deliveryDate,
@@ -199,9 +207,8 @@ export const getUserOrders = async (req, res) => {
         const { userId } = req.params;
         const orders = await Order.find({ userId: userId }).sort({ createdAt: -1 });
 
-        // Map the database fields to the structure your UI expects
         const formattedOrders = orders.map(order => ({
-            orderNo: order.orderId || order._id, // Prefer human-readable order ID, fallback to Mongo ID
+            orderNo: order.orderId || order._id, 
             status: order.status,
             date: new Date(order.createdAt).toLocaleDateString(),
             pickupDate: order.pickupDate,
@@ -212,6 +219,7 @@ export const getUserOrders = async (req, res) => {
             address: order.address,
             paymentStatus: order.paymentStatus || 'Pending',
             paymentMethod: order.paymentMethod,
+            transactionId: order.transactionId, 
             items: order.items.map(item => ({
                 name: item.clothType,
                 category: item.serviceType,
@@ -220,7 +228,7 @@ export const getUserOrders = async (req, res) => {
             })), 
             summary: {
                 grandTotal: order.totalAmount,
-                subtotal: order.totalAmount // Simplify for now
+                subtotal: order.totalAmount 
             },
             statusColor: order.status === 'Pending' ? 'bg-yellow-100' : 'bg-green-100'
         }));

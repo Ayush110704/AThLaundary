@@ -1,5 +1,6 @@
  import Admin from '../models/Admin.js';
 import User from '../models/User.js';
+import AdminActivity from '../models/AdminActivity.js';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 
@@ -51,6 +52,14 @@ export const loginAdmin = async (req, res) => {
             return res.status(400).json({ success: false, message: 'Invalid Admin Credentials' });
         }
 
+        // Record the admin login activity in the database
+        await AdminActivity.create({
+            adminId: admin._id,
+            name: admin.name,
+            email: admin.email,
+            loginTime: new Date()
+        });
+
         const token = jwt.sign(
             { id: admin._id, role: 'admin' }, 
             process.env.JWT_SECRET || 'secret', 
@@ -62,12 +71,24 @@ export const loginAdmin = async (req, res) => {
             token,
             admin: {
                 id: admin._id,
-                fullName: admin.name, // Added so frontend dashboard reads the name correctly
+                fullName: admin.name,
                 name: admin.name,
                 email: admin.email,
                 role: admin.role
             }
         });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+// GET ADMIN LOGIN ACTIVITIES
+export const getAdminLoginActivity = async (req, res) => {
+    try {
+        const activities = await AdminActivity.find()
+            .sort({ loginTime: -1 }) // Newest first so the latest login (sangmail) appears at the top
+            .limit(10);
+        res.status(200).json({ success: true, activities });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
     }
