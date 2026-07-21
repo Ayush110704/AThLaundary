@@ -27,6 +27,7 @@ const InquiryManagement = () => {
   const [selectedInquiry, setSelectedInquiry] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [loading, setLoading] = useState(true);
+  const API_URL = import.meta.env.VITE_API_URL;
 
   // Fetch dynamic inquiries from backend
   const fetchInquiries = async () => {
