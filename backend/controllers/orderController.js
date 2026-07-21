@@ -20,7 +20,8 @@ const generateOrderId = () => {
             pickupDate,
             pickupTimeSlot,
             deliveryDate,
-            deliveryTimeSlot
+            deliveryTimeSlot,
+            paymentId
         } = req.body;
 
         // UPDATED: Added these fields to the validation check
@@ -41,7 +42,7 @@ const generateOrderId = () => {
 
         if (paymentMethod === 'upi' || paymentMethod === 'card') {
             computedPaymentStatus = 'Paid';
-            computedTransactionId = `TXN${Date.now()}${Math.floor(Math.random() * 10000)}`;
+            computedTransactionId = paymentId || `TXN${Date.now()}${Math.floor(Math.random() * 10000)}`;
         }
 
         const order = await Order.create({
