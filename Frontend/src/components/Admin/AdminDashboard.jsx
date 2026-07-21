@@ -73,29 +73,31 @@ const AdminDashboard = () => {
 
   // ============= COMPUTED STATISTICS FROM BOOKINGS =============
   
-  // Order counts
-  const totalOrders = bookings.length;
-  const completedOrders = bookings.filter(b => b.status?.toLowerCase() === 'completed').length;
-  const activeOrders = bookings.filter(b => {
+  // Filter out cancelled orders
+  const activeBookings = bookings.filter(b => b.status?.toLowerCase() !== 'cancelled');
+  
+  // Order counts (excluding cancelled)
+  const totalOrders = activeBookings.length;
+  const completedOrders = activeBookings.filter(b => b.status?.toLowerCase() === 'completed').length;
+  const activeOrders = activeBookings.filter(b => {
     const s = b.status?.toLowerCase();
     return s && s !== 'completed' && s !== 'cancelled';
   }).length;
-  const pendingOrders = bookings.filter(b => b.status?.toLowerCase() === 'pickup' || b.status?.toLowerCase() === 'pending').length;
-  const cancelledOrders = bookings.filter(b => b.status?.toLowerCase() === 'cancelled').length;
+  const pendingOrders = activeBookings.filter(b => b.status?.toLowerCase() === 'pickup' || b.status?.toLowerCase() === 'pending').length;
 
-  // TOTAL REVENUE - ONLY REVENUE, NO PROFIT/LOSS
-  const totalRevenue = bookings.reduce((sum, b) => sum + (b.totalAmount || 0), 0);
+  // TOTAL REVENUE - ONLY REVENUE, NO PROFIT/LOSS (excluding cancelled)
+  const totalRevenue = activeBookings.reduce((sum, b) => sum + (b.totalAmount || 0), 0);
 
-  // Order status distribution for pie chart
-  const statusDistribution = bookings.reduce((acc, booking) => {
+  // Order status distribution for pie chart (excluding cancelled)
+  const statusDistribution = activeBookings.reduce((acc, booking) => {
     const s = booking.status?.toLowerCase();
     let displayStatus = 'Active';
     if (s === 'completed') {
       displayStatus = 'Completed';
-    } else if (s === 'cancelled') {
-      displayStatus = 'Cancelled';
     } else if (s === 'pickup' || s === 'pending') {
       displayStatus = 'Pending';
+    } else if (s && s !== 'cancelled') {
+      displayStatus = 'Active';
     }
     
     acc[displayStatus] = (acc[displayStatus] || 0) + 1;
@@ -107,8 +109,8 @@ const AdminDashboard = () => {
     value
   }));
 
-  // Service distribution
-  const serviceData = bookings.reduce((acc, booking) => {
+  // Service distribution (excluding cancelled)
+  const serviceData = activeBookings.reduce((acc, booking) => {
     if (booking.service) {
       const services = booking.service.split(',').map(s => s.trim()).filter(Boolean);
       services.forEach(s => {
@@ -125,8 +127,8 @@ const AdminDashboard = () => {
     value
   }));
 
-  // Payment method distribution
-  const paymentData = bookings.reduce((acc, booking) => {
+  // Payment method distribution (excluding cancelled)
+  const paymentData = activeBookings.reduce((acc, booking) => {
     const method = booking.paymentMethod || 'Unknown';
     acc[method] = (acc[method] || 0) + 1;
     return acc;
@@ -137,14 +139,14 @@ const AdminDashboard = () => {
     value
   }));
 
-  // Weekly revenue (last 7 days)
+  // Weekly revenue (last 7 days) (excluding cancelled)
   const today = new Date();
   const weeklyRevenueData = Array.from({ length: 7 }, (_, i) => {
     const date = new Date(today);
     date.setDate(date.getDate() - (6 - i));
     const day = date.toLocaleDateString('en-US', { weekday: 'short' });
     
-    const dailyRevenue = bookings
+    const dailyRevenue = activeBookings
       .filter(b => {
         const bookingDate = new Date(b.bookingDate);
         return bookingDate.getFullYear() === date.getFullYear() &&
@@ -156,14 +158,14 @@ const AdminDashboard = () => {
     return { name: day, revenue: dailyRevenue };
   });
 
-  // Monthly revenue (last 6 months)
+  // Monthly revenue (last 6 months) (excluding cancelled)
   const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
   const monthlyRevenueData = Array.from({ length: 6 }, (_, i) => {
     const month = new Date();
     month.setMonth(month.getMonth() - (5 - i));
     const monthName = monthNames[month.getMonth()];
     
-    const monthlyTotal = bookings
+    const monthlyTotal = activeBookings
       .filter(b => {
         const bookingMonth = new Date(b.bookingDate).getMonth();
         const bookingYear = new Date(b.bookingDate).getFullYear();
@@ -180,8 +182,7 @@ const AdminDashboard = () => {
   const STATUS_COLORS = {
     'Completed': '#10B981',
     'Pending': '#F59E0B',
-    'Active': '#3B82F6',
-    'Cancelled': '#EF4444'
+    'Active': '#3B82F6'
   };
 
   // Quick Actions Data  
@@ -280,8 +281,8 @@ const AdminDashboard = () => {
         </div>
       </motion.div>
 
-      {/* ===== ORDER STATUS SUMMARY CARDS ===== */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+      {/* ===== ORDER STATUS SUMMARY CARDS (NO CANCELLED) ===== */}
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-8">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -329,23 +330,6 @@ const AdminDashboard = () => {
             <div>
               <p className="text-xs text-gray-500">Completed Orders</p>
               <h4 className="text-xl font-bold text-gray-800">{completedOrders}</h4>
-            </div>
-          </div>
-        </motion.div>
-
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.4 }}
-          className="bg-white rounded-xl shadow-sm p-4 border-l-4 border-red-500"
-        >
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-red-100 rounded-lg">
-              <XCircle className="w-5 h-5 text-red-600" />
-            </div>
-            <div>
-              <p className="text-xs text-gray-500">Cancelled Orders</p>
-              <h4 className="text-xl font-bold text-gray-800">{cancelledOrders}</h4>
             </div>
           </div>
         </motion.div>
@@ -491,7 +475,7 @@ const AdminDashboard = () => {
           </div>
         </div>
 
-        {/* Order Status Distribution */}
+        {/* Order Status Distribution (NO CANCELLED) */}
         <div className="bg-white rounded-xl shadow-sm p-6">
           <h3 className="text-lg font-semibold text-gray-800 mb-4">Order Status Distribution</h3>
           {orderStatusData.length > 0 ? (
@@ -523,7 +507,7 @@ const AdminDashboard = () => {
               <p className="text-gray-500">No order data available</p>
             </div>
           )}
-          <div className="mt-2 grid grid-cols-2 gap-2">
+          <div className="mt-2 grid grid-cols-3 gap-2">
             {orderStatusData.map((item, index) => (
               <div key={index} className="flex items-center gap-2 text-xs">
                 <div 
