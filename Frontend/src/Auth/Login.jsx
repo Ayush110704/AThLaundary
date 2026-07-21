@@ -372,7 +372,7 @@ const Login = () => {
                     shape="pill"
                     text="continue_with"
                     size="large"
-                    width="300"
+                    width="200"
                   />
                 ) : (
                   <div className="w-[300px] h-10 bg-gray-100 rounded-full flex items-center justify-center text-gray-400 text-sm border border-gray-200">
