@@ -1,6 +1,7 @@
  import Admin from '../models/Admin.js';
 import User from '../models/User.js';
 import AdminActivity from '../models/AdminActivity.js';
+import Order from '../models/Order.js';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 
@@ -97,8 +98,32 @@ export const getAdminLoginActivity = async (req, res) => {
 // GET ALL CUSTOMER USERS
 export const getUsers = async (req, res) => {
     try {
-        const users = await User.find({ role: 'customer' }).sort({ createdAt: -1 });
-        res.status(200).json({ success: true, users });
+        const users = await User.find({ role: 'customer' }).sort({ createdAt: -1 }).lean();
+        const userIds = users.map(u => u._id.toString());
+        const orders = await Order.find({ userId: { $in: userIds } }).lean();
+
+        const enrichedUsers = users.map(user => {
+            const userOrders = orders.filter(o => o.userId && o.userId.toString() === user._id.toString());
+            const bookings = userOrders.length;
+            const completedBookings = userOrders.filter(o => o.status?.toLowerCase() === 'completed' || o.status?.toLowerCase() === 'delivered').length;
+            const cancelledBookings = userOrders.filter(o => o.status?.toLowerCase() === 'cancelled').length;
+            
+            // Calculate total spent on all paid orders
+            const totalSpentValue = userOrders
+                .filter(o => o.paymentStatus?.toLowerCase() === 'paid')
+                .reduce((sum, o) => sum + (o.totalAmount || 0), 0);
+            
+            return {
+                ...user,
+                bookings,
+                totalBookings: bookings,
+                completedBookings,
+                cancelledBookings,
+                totalSpent: `₹${totalSpentValue.toLocaleString('en-IN')}`,
+            };
+        });
+
+        res.status(200).json({ success: true, users: enrichedUsers });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
     }
