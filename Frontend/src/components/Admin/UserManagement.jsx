@@ -550,12 +550,12 @@ function UserManagement() {
           joined: u.createdAt || new Date().toISOString(),
           closedDate: u.closedDate || null,
           avatar: (u.firstName || u.name || 'U').charAt(0).toUpperCase(),
-          // Mock data integrations for detail view fields not yet in db schema
-          bookings: 0,
-          totalSpent: '₹0',
-          totalBookings: 0,
-          completedBookings: 0,
-          cancelledBookings: 0,
+          // Real data integrations from db schema
+          bookings: u.bookings || 0,
+          totalSpent: u.totalSpent || '₹0',
+          totalBookings: u.totalBookings || 0,
+          completedBookings: u.completedBookings || 0,
+          cancelledBookings: u.cancelledBookings || 0,
           preferredService: 'N/A',
           rating: 0,
           feedback: 'No feedback yet',
