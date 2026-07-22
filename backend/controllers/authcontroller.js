@@ -123,8 +123,11 @@ res.status(200).json({
 export const forgotPassword = async (req, res) => {
     const { email } = req.body;
     try {
-        const user = await User.findOne({ email });
-        if (!user) return res.status(404).json({ message: "User not found" });
+        if (!email) {
+            return res.status(400).json({ success: false, message: "Email is required" });
+        }
+        const user = await User.findOne({ email: email.trim() });
+        if (!user) return res.status(404).json({ success: false, message: "User not found with this email address" });
 
         // Generate a reset token valid for 15 minutes
         const resetToken = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: '15m' });
@@ -145,7 +148,8 @@ export const forgotPassword = async (req, res) => {
         await transporter.sendMail(mailOptions);
         res.status(200).json({ success: true, message: "Reset link sent to email" });
     } catch (error) {
-        res.status(500).json({ success: false, message: "Error sending email" });
+        console.error("Forgot password error:", error);
+        res.status(500).json({ success: false, message: error.message || "Error sending email" });
     }
 };
 

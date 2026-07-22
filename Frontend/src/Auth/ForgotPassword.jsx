@@ -1,24 +1,34 @@
- import React, { useState } from "react";
+import React, { useState } from "react";
 import { Mail, ArrowLeft, ArrowRight, RotateCcw } from "lucide-react";
 import { motion } from "framer-motion";
-import {Link} from "react-router-dom";
+import { Link } from "react-router-dom";
 import axios from "axios";
+import { API_BASE } from "../Api";
+import Swal from "sweetalert2";
+
 const ForgotPassword = () => {
   const [email, setEmail] = useState("");
+  const [loading, setLoading] = useState(false);
 
-   const handleSubmit = async (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!email) return;
+    setLoading(true);
     try {
-        const response = await axios.post(`${API_URL}/api/auth/forgot-password`, { email });
-        if (response.data.success) {
-            alert("Check your email for the reset link!");
-        }
+      const response = await axios.post(`${API_BASE}/auth/forgot-password`, { email: email.trim() });
+      if (response.data.success) {
+        Swal.fire("Success", "Check your email for the reset link!", "success");
+      } else {
+        Swal.fire("Error", response.data.message || "Failed to send reset link.", "error");
+      }
     } catch (error) {
-        // THIS WILL SHOW THE REAL ERROR
-        console.error("Full error details:", error.response?.data || error.message);
-        alert("Failed to send reset link. Check console for details.");
+      console.error("Full error details:", error.response?.data || error.message);
+      const errMsg = error.response?.data?.message || "Failed to send reset link. Check console for details.";
+      Swal.fire("Error", errMsg, "error");
+    } finally {
+      setLoading(false);
     }
-};
+  };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-100 via-blue-50 to-slate-200 px-4 py-10">
@@ -68,10 +78,11 @@ const ForgotPassword = () => {
 
           <button
             type="submit"
-            className="group w-full bg-blue-900 hover:bg-blue-800 text-white py-3 rounded-lg font-medium transition-all duration-300 flex items-center justify-center gap-2"
+            disabled={loading}
+            className="group w-full bg-blue-900 hover:bg-blue-800 disabled:opacity-50 text-white py-3 rounded-lg font-medium transition-all duration-300 flex items-center justify-center gap-2"
           >
-            Send Recovery Link
-            <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+            {loading ? "Sending Link..." : "Send Recovery Link"}
+            {!loading && <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />}
           </button>
         </form>
 

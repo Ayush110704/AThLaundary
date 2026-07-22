@@ -1,30 +1,38 @@
- import React, { useState } from "react";
+import React, { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { Lock } from "lucide-react";
 import { motion } from "framer-motion";
 import Swal from "sweetalert2";
+import { API_BASE } from "../Api";
 
 const ResetPassword = () => {
-  const API_URL = import.meta.env.VITE_API_URL;
   const { token } = useParams(); // Gets the token from the URL
   const [newPassword, setNewPassword] = useState("");
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
   const handleReset = async (e) => {
     e.preventDefault();
+    if (!newPassword) return;
+    setLoading(true);
     try {
-     const response = await axios.post(`${API_URL}/api/auth/reset-password`, {
-  token,
-  newPassword
-});
+      const response = await axios.post(`${API_BASE}/auth/reset-password`, {
+        token,
+        newPassword
+      });
 
       if (response.data.success) {
         Swal.fire("Success", "Your password has been reset!", "success");
         navigate("/login");
+      } else {
+        Swal.fire("Error", response.data.message || "Failed to reset password.", "error");
       }
     } catch (error) {
-      Swal.fire("Error", "Invalid or expired token.", "error");
+      const errMsg = error.response?.data?.message || "Invalid or expired token.";
+      Swal.fire("Error", errMsg, "error");
+    } finally {
+      setLoading(false);
     }
   };
 
