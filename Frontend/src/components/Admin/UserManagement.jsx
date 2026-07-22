@@ -1013,11 +1013,11 @@ function UserManagement() {
                             <span>{user.phone}</span>
                           </div>
                         )}
-                        {user.totalSpent && (
+                        {/* {user.totalSpent && (
                           <div className="text-xs text-gray-500">
                             Spent: {user.totalSpent}
                           </div>
-                        )}
+                        )} */}
                       </div>
                     </td>
                     {/* <td className="px-4 py-3">
