@@ -77,9 +77,12 @@ const Navbar = () => {
   }, [location.pathname]);
 
   const getServicePath = useCallback((name) => {
-    const nameLower = name.toLowerCase();
+    if (!name) return "/services";
+    const nameLower = name.toLowerCase().trim();
+    if (nameLower.startsWith("laundry") || (nameLower.includes("laundry") && !nameLower.startsWith("dry"))) {
+      return "/services/Laundry-service";
+    }
     if (nameLower.includes("dry")) return "/services/DryClean-service";
-    if (nameLower.includes("laundry")) return "/services/Laundry-service";
     if (nameLower.includes("shoe")) return "/services/ShoeCleaning-service";
     if (nameLower.includes("curtain")) return "/services/CurtainCleaning-service";
     if (nameLower.includes("carpet")) return "/services/CarpetCleaning-service";
