@@ -537,16 +537,7 @@ function Analytics() {
       <h3 className="text-lg font-semibold text-gray-900">Monthly Revenue Trend</h3>
       <p className="text-sm text-gray-500">Revenue performance over the last 6 months</p>
     </div>
-    <div className="flex items-center gap-2">
-      <span className="text-xs text-gray-500">Showing:</span>
-      <select
-        className="text-sm border border-gray-300 rounded-lg px-3 py-1 focus:ring-2 focus:ring-blue-500 outline-none"
-        value={selectedMetric}
-        onChange={(e) => setSelectedMetric(e.target.value)}
-      >
-        <option value="revenue">Revenue</option>
-      </select>
-    </div>
+   
   </div>
   
   <div className="h-64 relative">

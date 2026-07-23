@@ -37,7 +37,7 @@ const SubService = () => {
 
   const { Hero, WhyUs, ServiceOffered, CTA, Servicetitle, ExpertService, ExpertTitle } = data;
 
-  console.log(data);
+ 
 
   const features = [
     { id: 1, image: Eco, title: "Eco-Friendly Cleaning Machines ", desc: "Gentle on clothes, kind to the planet. " },

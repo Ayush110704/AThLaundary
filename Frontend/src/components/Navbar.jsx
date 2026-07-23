@@ -484,10 +484,10 @@ const Navbar = () => {
                         {userData?.FirstName}
                       </span>
                     </div>
-                    <div className="flex gap-3">
+                    <div className="flex  justify-between">
                       <button
                         onClick={handleMobileAuthAction}
-                        className="flex-1 py-2 px-4 bg-blue-600 rounded-full text-white font-semibold hover:bg-blue-700 transition-colors"
+                        className=" px-5 py-1  bg-blue-600 rounded-full text-white font-semibold hover:bg-blue-700 transition-colors"
                       >
                         Dashboard
                       </button>
