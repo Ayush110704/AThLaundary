@@ -138,13 +138,16 @@ export const forgotPassword = async (req, res) => {
         // Generate a reset token valid for 15 minutes
         const resetToken = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: '15m' });
 
-        // Setup Email Transporter with service: 'gmail' for cloud hosting compatibility (Render/Vercel)
+        // Force IPv4 (family: 4) & Port 587 to prevent ENETUNREACH IPv6 errors on Render
         const transporter = nodemailer.createTransport({
-            service: 'gmail',
+            host: 'smtp.gmail.com',
+            port: 587,
+            secure: false, // TLS
             auth: { 
                 user: process.env.EMAIL_USER.trim(), 
                 pass: process.env.EMAIL_PASS.trim() 
-            }
+            },
+            family: 4
         });
 
         const clientUrl = process.env.CLIENT_URL || req.headers.origin || 'https://ath-laundary.vercel.app';
