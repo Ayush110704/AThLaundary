@@ -317,9 +317,13 @@ function Footer() {
                 initial="hidden"
                 animate="visible"
                 custom={1}
+               
               >
+                <a  href="https://www.linkedin.com/company/athenura/posts/?feedView=all"
+                target="blank">
                 <FaLinkedinIn className="text-white group-hover:rotate-12 transition-transform duration-300 text-lg" />
-              </motion.div>
+             </a> 
+             </motion.div>
 
               <motion.div
                 className="group w-10 h-10 rounded-full bg-white/10 flex items-center justify-center cursor-pointer transition-colors duration-300 hover:bg-gradient-to-tr hover:from-[#feda75] hover:via-[#d62976] hover:to-[#4f5bd5] hover:shadow-lg hover:shadow-pink-500/30"
@@ -329,7 +333,12 @@ function Footer() {
                 animate="visible"
                 custom={2}
               >
-                <FaInstagram className="text-white group-hover:rotate-12 transition-transform duration-300 text-lg" />
+                <a href="https://www.instagram.com/athenura.in?igsh=MXg4MWtrenA2ZHF4Zw=="
+                target="blank"
+                >
+                
+              <FaInstagram className="text-white group-hover:rotate-12 transition-transform duration-300 text-lg" />
+              </a>
               </motion.div>
 
               <motion.div
