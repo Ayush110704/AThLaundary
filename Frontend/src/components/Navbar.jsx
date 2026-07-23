@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Menu, X, ChevronDown, User, LogOut } from "lucide-react";
 import { Link, NavLink, useNavigate, useLocation } from "react-router-dom";
@@ -12,6 +12,12 @@ const Navbar = () => {
   const [profile, setProfile] = useState(false);
   const [userData, setUserData] = useState(null);
   const [servicesList, setServicesList] = useState([]);
+  const [isTouchDevice, setIsTouchDevice] = useState(false);
+  const [desktopDropdownOpen, setDesktopDropdownOpen] = useState(false);
+  
+  const dropdownTimeoutRef = useRef(null);
+  const servicesRef = useRef(null);
+  const isHoveringRef = useRef(false);
 
   const API_URL = import.meta.env.VITE_API_URL;
   const navigate = useNavigate();
@@ -25,6 +31,14 @@ const Navbar = () => {
   ];
 
   const hideHamburger = hideHamburgerRoutes.includes(location.pathname);
+
+  // Detect touch device
+  useEffect(() => {
+    const checkTouchDevice = () => {
+      setIsTouchDevice('ontouchstart' in window || navigator.maxTouchPoints > 0);
+    };
+    checkTouchDevice();
+  }, []);
 
   // Check user login status
   useEffect(() => {
@@ -47,7 +61,6 @@ const Navbar = () => {
 
     checkUserLogin();
 
-    // Listen for storage changes (useful when multiple tabs open)
     const handleStorageChange = () => checkUserLogin();
     window.addEventListener("storage", handleStorageChange);
 
@@ -74,6 +87,7 @@ const Navbar = () => {
   useEffect(() => {
     setMobileMenu(false);
     setShowServices(false);
+    setDesktopDropdownOpen(false);
   }, [location.pathname]);
 
   const getServicePath = useCallback((name) => {
@@ -135,6 +149,56 @@ const Navbar = () => {
     }
   };
 
+  // Handle hover for desktop - open dropdown
+  const handleMouseEnter = () => {
+    if (!isTouchDevice) {
+      isHoveringRef.current = true;
+      clearTimeout(dropdownTimeoutRef.current);
+      setDesktopDropdownOpen(true);
+    }
+  };
+
+  // Handle hover for desktop - close dropdown with delay
+  const handleMouseLeave = () => {
+    if (!isTouchDevice) {
+      isHoveringRef.current = false;
+      dropdownTimeoutRef.current = setTimeout(() => {
+        if (!isHoveringRef.current) {
+          setDesktopDropdownOpen(false);
+        }
+      }, 300);
+    }
+  };
+
+  // Handle chevron click for touch devices
+  const handleChevronClick = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (isTouchDevice) {
+      setDesktopDropdownOpen(!desktopDropdownOpen);
+    }
+  };
+
+  // Handle clicking on the Services link
+  const handleServicesClick = (e) => {
+    // On touch devices, if dropdown is open, close it and navigate
+    if (isTouchDevice && desktopDropdownOpen) {
+      setDesktopDropdownOpen(false);
+    }
+    // Navigation will happen via the NavLink
+  };
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (desktopDropdownOpen && servicesRef.current && !servicesRef.current.contains(e.target)) {
+        setDesktopDropdownOpen(false);
+      }
+    };
+    document.addEventListener('click', handleClickOutside);
+    return () => document.removeEventListener('click', handleClickOutside);
+  }, [desktopDropdownOpen]);
+
   // Prevent body scroll when mobile menu is open
   useEffect(() => {
     if (mobileMenu) {
@@ -171,36 +235,71 @@ const Navbar = () => {
             {menu.map((item) => (
               <li key={item.id} className="group relative">
                 {item.dropdown ? (
-                  <>
-                    <NavLink
-                      to={item.path}
-                      className={({ isActive }) =>
-                        `relative flex items-center gap-1 transition-colors duration-300 ${
-                          isActive || location.pathname.startsWith("/services")
-                            ? "text-blue-600"
-                            : "text-gray-950 hover:text-blue-600"
-                        }`
-                      }
-                    >
-                      {item.label}
-                      <ChevronDown
-                        size={20}
-                        className="mt-1 transition-transform duration-300 group-hover:rotate-180"
-                      />
-                      {location.pathname.startsWith("/services") && (
-                        <motion.div
-                          layoutId="active-navbar"
-                          className="absolute left-1/2 -translate-x-1/2 -bottom-1 h-[2px] w-[30px] rounded-full bg-blue-600"
-                          transition={{
-                            type: "spring",
-                            stiffness: 450,
-                            damping: 30,
-                          }}
+                  <div
+                    ref={servicesRef}
+                    className="desktop-dropdown-container relative inline-block"
+                    onMouseEnter={handleMouseEnter}
+                    onMouseLeave={handleMouseLeave}
+                  >
+                    <div className="flex items-center gap-1">
+                      <NavLink
+                        to={item.path}
+                        onClick={handleServicesClick}
+                        className={({ isActive }) =>
+                          `relative transition-colors duration-300 ${
+                            isActive || location.pathname.startsWith("/services")
+                              ? "text-blue-600"
+                              : "text-gray-950 hover:text-blue-600"
+                          }`
+                        }
+                      >
+                        {item.label}
+                        {location.pathname.startsWith("/services") && (
+                          <motion.div
+                            layoutId="active-navbar"
+                            className="absolute left-1/2 -translate-x-1/2 -bottom-1 h-[2px] w-[30px] rounded-full bg-blue-600"
+                            transition={{
+                              type: "spring",
+                              stiffness: 450,
+                              damping: 30,
+                            }}
+                          />
+                        )}
+                      </NavLink>
+                      {/* Only show chevron button on touch devices */}
+                      {isTouchDevice && (
+                        <button
+                          onClick={handleChevronClick}
+                          className="p-1 hover:bg-gray-100 rounded-full transition-colors focus:outline-none"
+                          aria-label="Toggle services dropdown"
+                        >
+                          <ChevronDown
+                            size={20}
+                            className={`mt-1 transition-transform duration-300 ${
+                              desktopDropdownOpen ? "rotate-180" : ""
+                            }`}
+                          />
+                        </button>
+                      )}
+                      {/* Show chevron icon (non-interactive) on desktop */}
+                      {!isTouchDevice && (
+                        <ChevronDown
+                          size={20}
+                          className={`mt-1 transition-transform duration-300 ${
+                            desktopDropdownOpen ? "rotate-180" : ""
+                          }`}
                         />
                       )}
-                    </NavLink>
+                    </div>
 
-                    <div className="absolute top-full mt-3 w-56 bg-white rounded-xl shadow-xl border border-gray-100 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 overflow-hidden">
+                    {/* Dropdown */}
+                    <div 
+                      className={`absolute top-full left-0 mt-3 w-56 bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden transition-all duration-300 ${
+                        desktopDropdownOpen 
+                          ? 'opacity-100 visible' 
+                          : 'opacity-0 invisible pointer-events-none'
+                      }`}
+                    >
                       {item.dropdown.map((service, idx) =>
                         service.isInactive ? (
                           <div
@@ -218,6 +317,9 @@ const Navbar = () => {
                           <NavLink
                             key={`${service.path}-${idx}`}
                             to={service.path}
+                            onClick={() => {
+                              setDesktopDropdownOpen(false);
+                            }}
                             className={({ isActive }) =>
                               `block px-5 py-2.5 text-sm transition-colors ${
                                 isActive
@@ -231,7 +333,7 @@ const Navbar = () => {
                         )
                       )}
                     </div>
-                  </>
+                  </div>
                 ) : (
                   <NavLink
                     to={item.path}
@@ -272,8 +374,9 @@ const Navbar = () => {
           {userLogin ? (
             <div
               className="relative"
-              onMouseEnter={() => setProfile(true)}
-              onMouseLeave={() => setProfile(false)}
+              onMouseEnter={() => !isTouchDevice && setProfile(true)}
+              onMouseLeave={() => !isTouchDevice && setProfile(false)}
+              onClick={() => isTouchDevice && setProfile(!profile)}
             >
               <button
                 className="flex items-center gap-2 py-1.5 px-4 bg-white border-2 border-blue-600 rounded-full text-blue-700 cursor-pointer font-semibold transition-all duration-300 hover:scale-105 hover:bg-blue-700 hover:text-white hover:border-blue-700"
@@ -484,10 +587,10 @@ const Navbar = () => {
                         {userData?.FirstName}
                       </span>
                     </div>
-                    <div className="flex  justify-between">
+                    <div className="flex justify-between">
                       <button
                         onClick={handleMobileAuthAction}
-                        className=" px-5 py-1  bg-blue-600 rounded-full text-white font-semibold hover:bg-blue-700 transition-colors"
+                        className="px-5 py-1 bg-blue-600 rounded-full text-white font-semibold hover:bg-blue-700 transition-colors"
                       >
                         Dashboard
                       </button>
