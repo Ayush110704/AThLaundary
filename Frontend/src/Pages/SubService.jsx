@@ -109,7 +109,7 @@ const SubService = () => {
       <div>
         {/* hero section */}
         <section
-  className="w-full  h-[600px] md:min-h-screen grid grid-cols-1 lg:grid-cols-2  md:pt-24"
+  className="w-full  h-[600px] md:min-h-screen grid grid-cols-1 xl:grid-cols-2  md:pt-24"
   style={{
     backgroundImage: `url(${Hero.HeroBackground})`,
     backgroundSize: "cover",
@@ -218,7 +218,7 @@ text-2xl sm:text-3xl md:text-4xl lg:text-5xl">
   </div>
 
   {/* Right Image */}
-  <div className="hidden lg:flex items-center justify-end overflow-hidden">
+  <div className="hidden xl:flex items-center justify-end overflow-hidden">
             <img
               src={Hero.HeroVector}
               alt=""
